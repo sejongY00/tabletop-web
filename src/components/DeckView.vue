@@ -84,7 +84,7 @@ function layerStyle(layerIndex: number) {
           <CardView
             :card="deckBackCard"
             face-down
-            :size="large ? '2xl' : 'md'"
+            :size="large ? 'xxl' : 'md'"
             :dimensions="cardDimensions"
           />
         </div>

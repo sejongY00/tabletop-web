@@ -21,7 +21,7 @@ const isHovered = ref(false)
 
 const visibleCount = computed(() => Math.min(Math.max(props.count, 0), 14))
 
-const cardSize = computed((): CardViewSize => (props.large ? '2xl' : 'md'))
+const cardSize = computed((): CardViewSize => (props.large ? 'xxl' : 'md'))
 const cardHalf = computed(() => (props.large ? 70 : 36))
 const cardHeight = computed(() => (props.large ? 210 : 120))
 const cardSpacing = computed(() => (props.large ? 28 : 18))

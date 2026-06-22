@@ -1,4 +1,4 @@
-export type CardViewSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+export type CardViewSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
 
 /** 보드판 중앙 덱·버린 더미 공통 카드 크기 */
 export const PILE_CARD = {

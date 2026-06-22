@@ -123,7 +123,7 @@ const dimensionStyle = computed(() => {
   --card-h: 176px;
 }
 
-.card.2xl {
+.card.xxl {
   --card-w: 140px;
   --card-h: 210px;
   border-radius: 12px;
@@ -247,12 +247,12 @@ const dimensionStyle = computed(() => {
   font-size: 2.6rem;
 }
 
-.card.2xl .top-left,
-.card.2xl .bottom-right {
+.card.xxl .top-left,
+.card.xxl .bottom-right {
   font-size: 1.35rem;
 }
 
-.card.2xl .center-value {
+.card.xxl .center-value {
   font-size: 3rem;
 }
 

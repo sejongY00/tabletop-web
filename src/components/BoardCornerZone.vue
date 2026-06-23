@@ -30,7 +30,7 @@ const large = computed(() => props.corner === 'top' || props.corner === 'bottom'
 </script>
 
 <template>
-  <div class="corner-zone" :class="[`corner-${corner}`, { 'is-turn': isTurn }]">
+  <div class="corner-zone" :class="[`corner-${corner}`, { 'is-turn': isTurn }]" :data-board-corner="corner">
     <!--
       배치 기준: 각 모서리에 앉아 테이블 중앙을 바라볼 때
       - 패 좌측 = 이름

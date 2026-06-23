@@ -22,6 +22,7 @@ const pile = computed(() => (props.large ? PILE_CARD.lg : PILE_CARD.md))
     <span v-if="showLabel" class="label">버린 더미</span>
     <div
       class="discard-slot"
+      data-discard-pile
       :class="{ large }"
       :style="{ width: `${pile.stackWidth}px`, height: `${pile.stackHeight}px` }"
     >

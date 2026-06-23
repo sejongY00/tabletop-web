@@ -1,12 +1,13 @@
 import { ref } from 'vue'
 import Peer, { type DataConnection } from 'peerjs'
 import type { CardColor, GameState } from '@/games/onecard/types'
-import { createGame, drawCardToPlayer, playCard, playerDrawCards, declareOneCard, toPublicState, undoLastAction, continueAfterRoundWin } from '@/games/onecard/game'
+import { createGame, drawCardToPlayer, playCard, playerDrawCards, declareOneCard, toPublicState, undoLastAction, continueAfterRoundWin, getTopCard } from '@/games/onecard/game'
 import { createPeerOptions } from '@/config/peer'
 import {
   autoAssignSeats,
   loadSeats,
   turnOrderFromSeats,
+  cornerForPlayer,
   MAX_PLAYERS,
   type SeatMap,
 } from '@/utils/boardLayout'
@@ -118,13 +119,29 @@ function handleHostPlayerMessage(msg: RoomMessage, conn: PeerConnection) {
 
   switch (msg.type) {
     case 'play-card': {
+      const prevTop = getTopCard(gameState.value)
+      const prevActiveColor = gameState.value.activeColor
       const result = playCard(gameState.value, msg.playerId, msg.cardId, msg.chosenColor)
       if (!result.ok) {
         send(conn, { type: 'play-rejected', reason: result.reason })
         return
       }
+      const playedCard = result.state.discardPile[result.state.discardPile.length - 1]
       gameState.value = result.state
-      useRoomStore().clearPlayerHandPreview(msg.playerId)
+      const store = useRoomStore()
+      store.clearPlayerHandPreview(msg.playerId)
+      const seats = loadSeats()
+      const corner = seats ? cornerForPlayer(seats, msg.playerId) : null
+      if (playedCard && corner) {
+        store.triggerPlayAnimation(
+          msg.playerId,
+          corner,
+          playedCard,
+          result.state.activeColor,
+          prevTop,
+          prevActiveColor,
+        )
+      }
       syncAllHands()
       break
     }
@@ -359,14 +376,32 @@ function drawForPlayer(playerId: string): string | null {
   if (gameState.value.phase !== 'playing') return '지금은 카드를 뽑을 수 없습니다.'
   if (!gameState.value.turnOrder.includes(playerId)) return '이미 패를 모두 낸 플레이어입니다.'
 
-  const currentId = gameState.value.turnOrder[gameState.value.currentTurnIndex]
+  const state = gameState.value
+  const currentId = state.turnOrder[state.currentTurnIndex]
+  const store = useRoomStore()
+
+  if (state.drawPenalty > 0 && currentId !== playerId) {
+    return '공격 카드를 받을 차례인 플레이어부터 뽑아주세요.'
+  }
+
+  let drawCount = 1
+
   if (currentId === playerId) {
-    const result = playerDrawCards(gameState.value, playerId)
+    drawCount = state.drawPenalty > 0 ? state.drawPenalty : 1
+    const result = playerDrawCards(state, playerId)
     if (!result.ok) return result.reason
     gameState.value = result.state
   } else {
-    gameState.value = drawCardToPlayer(gameState.value, playerId)
+    drawCount = 1
+    gameState.value = drawCardToPlayer(state, playerId)
   }
+
+  const seats = loadSeats()
+  const corner = seats ? cornerForPlayer(seats, playerId) : null
+  if (corner) {
+    store.triggerDrawAnimation(playerId, corner, drawCount)
+  }
+
   syncAllHands()
   return null
 }

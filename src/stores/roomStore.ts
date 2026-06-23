@@ -1,7 +1,25 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Card, PublicGameState, RoomRole } from '@/games/onecard/types'
+import type { Card, CardColor, PublicGameState, RoomRole } from '@/games/onecard/types'
 import type { ConnectedPlayer } from '@/composables/messages'
+import type { BoardCorner } from '@/utils/boardLayout'
+
+export interface DrawAnimationPayload {
+  id: number
+  playerId: string
+  corner: BoardCorner
+  count: number
+}
+
+export interface PlayAnimationPayload {
+  id: number
+  playerId: string
+  corner: BoardCorner
+  card: Card
+  activeColor: CardColor | null
+  previousTopCard: Card | null
+  previousActiveColor: CardColor | null
+}
 
 export const useRoomStore = defineStore('room', () => {
   const roomCode = ref('')
@@ -17,6 +35,11 @@ export const useRoomStore = defineStore('room', () => {
   const myHand = ref<Card[]>([])
   const playerHandPreviews = ref<Record<string, string | null>>({})
   const statusMessage = ref('')
+  const playAnimation = ref<PlayAnimationPayload | null>(null)
+  const drawAnimation = ref<DrawAnimationPayload | null>(null)
+
+  let playAnimationSeq = 0
+  let drawAnimationSeq = 0
 
   const isBoard = computed(() => role.value === 'board')
   const isPlayer = computed(() => role.value === 'player')
@@ -42,6 +65,8 @@ export const useRoomStore = defineStore('room', () => {
     myHand.value = []
     playerHandPreviews.value = {}
     statusMessage.value = ''
+    playAnimation.value = null
+    drawAnimation.value = null
   }
 
   function setPlayerHandPreview(playerId: string, cardId: string | null) {
@@ -61,6 +86,46 @@ export const useRoomStore = defineStore('room', () => {
     }, 3000)
   }
 
+  function triggerPlayAnimation(
+    playerId: string,
+    corner: BoardCorner,
+    card: Card,
+    activeColor: CardColor | null,
+    previousTopCard: Card | null,
+    previousActiveColor: CardColor | null,
+  ) {
+    playAnimation.value = {
+      id: ++playAnimationSeq,
+      playerId,
+      corner,
+      card,
+      activeColor,
+      previousTopCard,
+      previousActiveColor,
+    }
+  }
+
+  function clearPlayAnimation() {
+    playAnimation.value = null
+  }
+
+  function triggerDrawAnimation(
+    playerId: string,
+    corner: BoardCorner,
+    count: number,
+  ) {
+    drawAnimation.value = {
+      id: ++drawAnimationSeq,
+      playerId,
+      corner,
+      count,
+    }
+  }
+
+  function clearDrawAnimation() {
+    drawAnimation.value = null
+  }
+
   return {
     roomCode,
     role,
@@ -75,6 +140,8 @@ export const useRoomStore = defineStore('room', () => {
     myHand,
     playerHandPreviews,
     statusMessage,
+    playAnimation,
+    drawAnimation,
     isBoard,
     isPlayer,
     playerCount,
@@ -85,5 +152,9 @@ export const useRoomStore = defineStore('room', () => {
     setPlayerHandPreview,
     clearPlayerHandPreview,
     setStatus,
+    triggerPlayAnimation,
+    clearPlayAnimation,
+    triggerDrawAnimation,
+    clearDrawAnimation,
   }
 })

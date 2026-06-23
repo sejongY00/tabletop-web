@@ -72,6 +72,7 @@ function layerStyle(layerIndex: number) {
   <div class="deck" :class="{ large, empty: visualStack.layers === 0 }">
     <div
       class="deck-stack"
+      data-board-deck
       :style="{ width: `${stackBox.width}px`, height: `${stackBox.height}px` }"
     >
       <template v-if="visualStack.layers > 0">

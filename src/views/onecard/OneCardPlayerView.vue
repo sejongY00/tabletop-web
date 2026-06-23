@@ -141,7 +141,7 @@ function handleColorCancel() {
         :top-card="publicState?.topCard ?? null"
         :active-color="publicState?.activeColor"
         :draw-penalty="drawPenalty"
-        :can-interact="isMyTurn"
+        :can-play="isMyTurn"
         @play="handlePlay"
         @request-color="handleRequestColor"
         @selection-change="handleSelectionChange"

@@ -21,6 +21,8 @@ import BoardSeatPicker from '@/components/BoardSeatPicker.vue'
 import BoardCornerZone from '@/components/BoardCornerZone.vue'
 import DeckView from '@/components/DeckView.vue'
 import DiscardPileView from '@/components/DiscardPileView.vue'
+import BoardPlayAnimation from '@/components/BoardPlayAnimation.vue'
+import BoardDrawAnimation from '@/components/BoardDrawAnimation.vue'
 import UndoTurnButton from '@/components/UndoTurnButton.vue'
 import ExitButton from '@/components/ExitButton.vue'
 
@@ -43,6 +45,38 @@ const isPlaying = computed(() => publicState.value?.phase === 'playing')
 const isRoundWon = computed(() => publicState.value?.phase === 'round_won')
 const isFinished = computed(() => publicState.value?.phase === 'finished')
 const deckCount = computed(() => publicState.value?.deckCount ?? null)
+
+const displayDeckCount = computed(() => {
+  const c = deckCount.value
+  if (c == null || !store.drawAnimation) return c
+  return c + store.drawAnimation.count
+})
+
+/** 애니메이션 중 버린 더미는 이전 카드 유지 → 날아오는 카드와 겹침 방지 */
+const discardTopCard = computed(() => {
+  if (store.playAnimation) return store.playAnimation.previousTopCard
+  return publicState.value?.topCard ?? null
+})
+const discardActiveColor = computed(() => {
+  if (store.playAnimation) return store.playAnimation.previousActiveColor
+  return publicState.value?.activeColor
+})
+
+function onPlayAnimationComplete() {
+  store.clearPlayAnimation()
+}
+
+function onDrawAnimationComplete() {
+  store.clearDrawAnimation()
+}
+
+function handCountForPlayer(playerId: string, actual: number) {
+  const anim = store.drawAnimation
+  if (anim?.playerId === playerId) {
+    return Math.max(0, actual - anim.count)
+  }
+  return actual
+}
 
 const canStart = computed(
   () => store.canStartGame && assignedPlayerCount(seatMap.value) >= 2,
@@ -190,7 +224,7 @@ function handleContinue() {
           v-if="playerAtCorner(corner)"
           :corner="corner"
           :player-name="playerAtCorner(corner)!.name"
-          :hand-count="playerAtCorner(corner)!.handCount"
+          :hand-count="handCountForPlayer(playerAtCorner(corner)!.id, playerAtCorner(corner)!.handCount)"
           :is-turn="currentTurnId === playerAtCorner(corner)!.id"
           :preview-index="previewForCorner(corner)"
           :show-draw="isPlaying"
@@ -199,14 +233,25 @@ function handleContinue() {
       </template>
 
       <div class="center-pile">
-        <DeckView large :count="deckCount" />
+        <DeckView large :count="displayDeckCount" />
         <DiscardPileView
-          :top-card="publicState?.topCard ?? null"
-          :active-color="publicState?.activeColor"
+          :top-card="discardTopCard"
+          :active-color="discardActiveColor"
           large
+          :class="{ 'pile-landing': !!store.playAnimation }"
         />
       </div>
     </section>
+
+    <BoardPlayAnimation
+      :payload="store.playAnimation"
+      @complete="onPlayAnimationComplete"
+    />
+
+    <BoardDrawAnimation
+      :payload="store.drawAnimation"
+      @complete="onDrawAnimationComplete"
+    />
 
     <p v-if="store.statusMessage" class="toast">{{ store.statusMessage }}</p>
     <UndoTurnButton
@@ -286,6 +331,16 @@ function handleContinue() {
   justify-content: center;
   gap: clamp(24px, 6vw, 64px);
   padding: 8px 0;
+}
+
+.center-pile :deep(.pile-landing .discard-slot) {
+  animation: pileLand 0.35s ease 0.42s both;
+}
+
+@keyframes pileLand {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
 
 .winner-banner {

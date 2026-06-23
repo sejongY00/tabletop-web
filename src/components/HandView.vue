@@ -9,8 +9,11 @@ const props = defineProps<{
   topCard?: Card | null
   activeColor?: CardColor | null
   drawPenalty?: number
-  canInteract?: boolean
+  /** 내 턴일 때만 카드 내기 가능 */
+  canPlay?: boolean
 }>()
+
+const canPlay = computed(() => props.canPlay ?? false)
 
 const emit = defineEmits<{
   play: [cardId: string]
@@ -41,7 +44,7 @@ const cardDimensions = computed(() => ({
 const fanHeightPx = computed(() => Math.round(cardHeightPx.value * 1.15 + 48))
 
 const playableIds = computed(() => {
-  if (!props.topCard || !props.canInteract) return new Set<string>()
+  if (!props.topCard || !canPlay.value) return new Set<string>()
   return new Set(
     getPlayableCards(
       props.cards,
@@ -125,11 +128,17 @@ function getFanStyle(index: number, total: number) {
 }
 
 function handlePointerDown(e: PointerEvent, card: Card) {
-  if (!props.canInteract) return
-
   if (selectedId.value !== card.id) {
     selectedId.value = card.id
     justSelected.value = true
+    return
+  }
+
+  if (!canPlay.value) {
+    if (!justSelected.value) {
+      selectedId.value = null
+    }
+    justSelected.value = false
     return
   }
 
@@ -154,6 +163,12 @@ function handlePointerMove(e: PointerEvent) {
 function handlePointerUp(card: Card) {
   if (justSelected.value && selectedId.value === card.id && !dragCardId.value) {
     justSelected.value = false
+    return
+  }
+
+  if (!canPlay.value) {
+    dragCardId.value = null
+    isDragging.value = false
     return
   }
 
@@ -198,11 +213,14 @@ defineExpose({ clearSelection })
       @pointerdown.prevent="clearSelection"
     />
 
-    <p v-if="selectedId && playableIds.has(selectedId)" class="hint">
+    <p v-if="selectedId && canPlay && playableIds.has(selectedId)" class="hint">
       ↑ 위로 드래그하여 내기
     </p>
-    <p v-else-if="selectedId" class="hint muted">
+    <p v-else-if="selectedId && canPlay" class="hint muted">
       낼 수 없는 카드 — 탭하여 접기
+    </p>
+    <p v-else-if="selectedId" class="hint muted">
+      카드 상세 보기 — 탭하여 접기
     </p>
 
     <div
@@ -225,8 +243,7 @@ defineExpose({ clearSelection })
           :card="card"
           :active-color="activeColor"
           :selected="selectedId === card.id"
-          :playable="playableIds.has(card.id)"
-          :disabled="!canInteract"
+          :playable="canPlay && playableIds.has(card.id)"
           :dimensions="cardDimensions"
           size="md"
         />

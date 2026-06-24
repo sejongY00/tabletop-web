@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useRoomStore } from '@/stores/roomStore'
 import { usePeerRoom } from '@/composables/usePeerRoom'
 import {
@@ -13,10 +13,13 @@ import {
 } from '@/utils/session'
 import HomeButton from '@/components/HomeButton.vue'
 import RoomCodeDisplay from '@/components/RoomCodeDisplay.vue'
+import RoomJoinQr from '@/components/RoomJoinQr.vue'
+import { parseRoomCodeFromQuery, ROOM_QUERY_KEY } from '@/utils/joinUrl'
 import { MAX_PLAYERS } from '@/utils/boardLayout'
 import type { RoomRole } from '@/games/onecard/types'
 
 const router = useRouter()
+const route = useRoute()
 const store = useRoomStore()
 const { hostRoom, joinRoom, destroy } = usePeerRoom()
 
@@ -25,9 +28,26 @@ const inputCode = ref('')
 const selectedRole = ref<RoomRole>('player')
 const playerName = ref('')
 
-onMounted(() => {
+onMounted(async () => {
   playerName.value = loadSavedPlayerName()
+  await applyRoomFromQuery()
 })
+
+async function applyRoomFromQuery() {
+  const code = parseRoomCodeFromQuery(route.query)
+  if (!code) return
+
+  if (route.query[ROOM_QUERY_KEY]) {
+    router.replace({ path: route.path, query: {} })
+  }
+
+  inputCode.value = code
+  mode.value = 'join'
+
+  if (playerName.value.trim()) {
+    await joinExistingRoom()
+  }
+}
 
 watch(playerName, (name) => {
   savePlayerName(name)
@@ -175,6 +195,7 @@ function leaveSubScreen() {
       <!-- 대기 화면 (보드판) -->
       <div v-else-if="mode === 'waiting'" class="waiting">
         <RoomCodeDisplay :code="localRoomCode" />
+        <RoomJoinQr :room-code="localRoomCode" />
         <p v-if="isConnecting" class="connecting">연결 중...</p>
         <p class="wait-info">
           접속: <strong>{{ deviceCount }}/{{ 1 + MAX_PLAYERS }}</strong>대
